@@ -4,24 +4,29 @@ import * as url from 'node:url';
 import { default as express } from 'express';
 import { default as sqlite3 } from 'sqlite3';
 
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const db_filename = path.join(__dirname, 'db', 'stpaul_crime.sqlite3');
+// const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+// const db_filename = path.join(__dirname, 'db', 'stpaul_crime.sqlite3');
+let public_dir = './public';
+const dbFile = "./stpaul_crime.sqlite3";
 
-const port = 8000;
+const port = 8080;
 
+// let app = express();
+// app.use(express.json());
 let app = express();
+app.use(express.static(public_dir));
 app.use(express.json());
 
 /********************************************************************
  ***   DATABASE FUNCTIONS                                         *** 
  ********************************************************************/
 // Open SQLite3 database (in read-write mode)
-let db = new sqlite3.Database(db_filename, sqlite3.OPEN_READWRITE, (err) => {
+let db = new sqlite3.Database(dbFile, sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
-        console.log('Error opening ' + path.basename(db_filename));
+        console.log('Error opening ' + path.basename(dbFile));
     }
     else {
-        console.log('Now connected to ' + path.basename(db_filename));
+        console.log('Now connected to ' + path.basename(dbFile));
     }
 });
 
@@ -56,18 +61,43 @@ function dbRun(query, params) {
 /********************************************************************
  ***   REST REQUEST HANDLERS                                      *** 
  ********************************************************************/
-// GET request handler for crime codes
+// GET request handler for crime codes -- Anne
 app.get('/codes', (req, res) => {
-    console.log(req.query); // query object (key-value pairs after the ? in the url)
+    // console.log(req.query); // query object (key-value pairs after the ? in the url)
     
-    res.status(200).type('json').send({}); // <-- you will need to change this
+    // res.status(200).type('json').send({}); // <-- you will need to change this
+    let sql = `SELECT code, incident_type FROM Codes ORDER BY code ASC`;
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error});
+            return;
+        }
+        res.json(rows.map(r => ({
+            code: r.code,
+            type: r.incident_type
+        })));
+    });
 });
 
-// GET request handler for neighborhoods
+// GET request handler for neighborhoods -- Anne
 app.get('/neighborhoods', (req, res) => {
-    console.log(req.query); // query object (key-value pairs after the ? in the url)
+    // console.log(req.query); // query object (key-value pairs after the ? in the url)
     
-    res.status(200).type('json').send({}); // <-- you will need to change this
+    // res.status(200).type('json').send({}); // <-- you will need to change this
+    let sql = `SELECT neighborhood_number, neighborhood_name FROM Neighborhoods ORDER BY neighborhood_number ASC`;
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+
+        res.json(rows.map(r => ({
+            id: r.neighborhood_number,
+            name: r.neighborhood_name
+        })));
+    });
 });
 
 // GET request handler for crime incidents
