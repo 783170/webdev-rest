@@ -1,0 +1,11 @@
+h1 {
+    color: #8923bf;
+}
+table {
+    border-collapse: collapse;
+}
+th, td {
+    border: solid 1px #000000;
+}
+
+/* TODO :: Add more styles as needed */
