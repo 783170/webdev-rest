@@ -100,11 +100,58 @@ app.get('/neighborhoods', (req, res) => {
     });
 });
 
-// GET request handler for crime incidents
+// GET request handler for crime incidents -- Erin
 app.get('/incidents', (req, res) => {
-    console.log(req.query); // query object (key-value pairs after the ? in the url)
-    
-    res.status(200).type('json').send({}); // <-- you will need to change this
+    let sql = `SELECT case_number, DATE(date_time) as date, TIME(date_time) as time, code, incident, police_grid, neighborhood_number, block FROM Incidents`;
+
+    let first = true;
+    // WHERE ... AND ... AND ...
+    if (!!req.query.start_date) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` DATE(date_time) >= '${req.query.start_date}'`;
+        first = false;
+    }
+    if (!!req.query.end_date) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` DATE(date_time) <= '${req.query.end_date}'`;
+        first = false;
+    }
+    if (!!req.query.code) {
+        sql += (first ? ' WHERE' : ' AND') + ` code IN (${req.query.code})`;
+        first = false;
+    }
+    if (!!req.query.grid) {
+        sql += (first ? ' WHERE' : ' AND') + ` police_grid IN (${req.query.grid})`;
+        first = false;
+    }
+    if (!!req.query.neighborhood) {
+        sql += (first ? ' WHERE' : ' AND') + ` neighborhood_number IN (${req.query.neighborhood})`;
+        first = false;
+    }
+
+    // ORDER BY
+    sql += ' ORDER BY date_time DESC';
+
+    // LIMIT
+    sql += (!!req.query.limit) ? ` LIMIT ${req.query.limit}` : ' LIMIT 1000';
+
+
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({error: err.message});
+            return;
+        } 
+
+        res.json(rows.map(r => ({
+            case_number: r.case_number,
+            date: r.date,
+            time: r.time,
+            code: r.code,
+            incident: r.incident,
+            police_grid: r.police_grid,
+            neighborhood_number: r.neighborhood_number,
+            block: r.block
+        })));
+    });
 });
 
 // PUT request handler for new crime incident
