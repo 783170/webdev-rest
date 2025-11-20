@@ -106,6 +106,10 @@ app.get('/incidents', (req, res) => {
 
     let first = true;
     // WHERE ... AND ... AND ...
+    if (!!req.query.case_number) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` case_number = '${req.query.case_number}'`;
+        first = false;
+    }
     if (!!req.query.start_date) { //YYYY-MM-DD
         sql += (first ? ' WHERE' : ' AND') + ` DATE(date_time) >= '${req.query.start_date}'`;
         first = false;
@@ -134,7 +138,6 @@ app.get('/incidents', (req, res) => {
     sql += (!!req.query.limit) ? ` LIMIT ${req.query.limit}` : ' LIMIT 1000';
 
 
-
     db.all(sql, [], (err, rows) => {
         if (err) {
             res.status(500).json({error: err.message});
@@ -156,9 +159,39 @@ app.get('/incidents', (req, res) => {
 
 // PUT request handler for new crime incident
 app.put('/new-incident', (req, res) => {
-    console.log(req.body); // uploaded data
-    
-    res.status(200).type('txt').send('OK'); // <-- you may need to change this
+    if (req.body.case_number) {
+        db.all(`SELECT COUNT(case_number) FROM Incidents WHERE case_number = ${req.body.case_number};`, [], (err, rows) => {
+            if (err) {
+                res.status(500).json({error: err.message});
+                return;
+            } else {
+                if (rows[0]['COUNT(case_number)'] == 1) {
+                    res.status(500).json({error: 'case number already in the database'});
+                } else {
+                    let sql = 'INSERT INTO Incidents (case_number, date_time, code, incident, police_grid, neighborhood_number, block) VALUES (';
+
+                    sql += `'${req.body.case_number}'`;
+                    sql += (!!req.body.date && !!req.body.time) ? `, '${req.body.date} ${req.body.time}'` : ', null';
+                    sql += (!!req.body.code)? `, ${req.body.code}` : ', null';
+                    sql += (!!req.body.incident) ? `, '${req.body.incident}'` : ', null';
+                    sql += (!!req.body.police_grid) ? `, ${req.body.police_grid}` : ', null';
+                    sql += (!!req.body.neighborhood_number) ? `, ${req.body.neighborhood_number}` : ', null';
+                    sql += (!!req.body.block) ? `, '${req.body.block}'` : ', null';
+                    sql += ');';
+
+                    db.exec(sql, (err) => {
+                        if (err) {
+                            res.status(500).json({error: err.message});
+                        } else {
+                            res.status(200).type('txt').send('OK');
+                        }
+                    })
+                }
+            }
+        })
+    } else {
+        res.status(500).json({error: 'no case number provided'});
+    }
 });
 
 // DELETE request handler for new crime incident
