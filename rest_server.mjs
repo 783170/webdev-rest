@@ -68,15 +68,24 @@ app.get('/codes', (req, res) => {
     // res.status(200).type('json').send({}); // <-- you will need to change this
     let sql = `SELECT code, incident_type FROM Codes ORDER BY code ASC`;
 
-    db.all(sql, [], (err, rows) => {
+    let params = [];
+
+    db.all(sql, params, (err, rows) => {
         if (err) {
-            res.status(500).json({ error});
+            res.status(500).json({ error: err.message });
             return;
         }
-        res.json(rows.map(r => ({
+        else {
+            if (req.query.code) {
+                const placeholders = req.query.code.split(',').map(() => '?').join(',');
+                sql += ` WHERE code IN (${placeholders})`;
+                params = req.query.code.split(',');
+            }
+            res.json(rows.map(r => ({
             code: r.code,
             type: r.incident_type
         })));
+        }
     });
 });
 
@@ -86,17 +95,27 @@ app.get('/neighborhoods', (req, res) => {
     
     // res.status(200).type('json').send({}); // <-- you will need to change this
     let sql = `SELECT neighborhood_number, neighborhood_name FROM Neighborhoods ORDER BY neighborhood_number ASC`;
+    let params = [];
 
     db.all(sql, [], (err, rows) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
+        else {
+            if (req.query.id) {
+                const placeholders = req.query.id.split(',').map(() => '?').join(',');
+                sql += ` WHERE neighborhood_number IN (${placeholders})`;
+                params = req.query.id.split(',');
+            }
+                    
+            //sql += ` ORDER BY neighborhood_number ASC`;
 
-        res.json(rows.map(r => ({
-            id: r.neighborhood_number,
-            name: r.neighborhood_name
-        })));
+            res.json(rows.map(r => ({
+                id: r.neighborhood_number,
+                name: r.neighborhood_name
+            })));
+        }
     });
 });
 
