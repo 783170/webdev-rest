@@ -25,3 +25,26 @@ fetch("/incidents")
     // .catch(err => {
     //     console.log(err);
     // });
+
+// Remove incident
+const removeBtn = document.getElementById("remove-btn");
+removeBtn.addEventListener("click", () => {
+    const caseNum = document.getElementById("case_input").value.trim();
+    if (!caseNum) {
+        document.getElementById("remove-result").innerText = "Please enter a case number.";
+        return;
+    }
+
+    fetch("/remove-incident", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case_number: caseNum })
+    })
+    .then(res => {
+        if (res.status === 200) return "Incident removed successfully!";
+        if (res.status === 500) return "Error: Case number does not exist.";
+        return "Unknown error";
+    })
+    .then(msg => document.getElementById("remove-result").innerText = msg)
+    .catch(err => document.getElementById("remove-result").innerText = "Network error: " + err);
+});

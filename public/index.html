@@ -7,24 +7,33 @@
         <link rel="stylesheet" href="css/style.css"/>
     </head>
     <body>
-        <h1></h1>  <!-- TODO :: Add a title -->
+        <h1>St. Paul Crime Incidents</h1>
+
+        <!-- Remove Incident Section -->
+        <div>
+            <label for="case_input">Case Number to Remove:</label>
+            <input id="case_input" type="text" placeholder="Enter case number">
+            <button id="remove-btn" type="button">Remove Incident</button>
+            <p id="remove-result"></p>
+        </div>
+
+        <!-- Incident Table -->
         <table>
             <thead>
                 <tr>
-                <th>Case #</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Code</th>
-                <th>Incident</th>
-                <th>Grid</th>
-                <th>Neighborhood</th>
-                <th>Block</th>
+                    <th>Case #</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Code</th>
+                    <th>Incident</th>
+                    <th>Grid</th>
+                    <th>Neighborhood</th>
+                    <th>Block</th>
                 </tr>
             </thead>
-            <tbody id = "incident-tbody"></tbody>
-                <!-- User data will be populated here -->
-                <!-- Use client side javascript to manipualte the DOM -->
+            <tbody id="incident-tbody"></tbody>
         </table>
-        <script type ="module" src="js/script.js"></script>
+
+        <script type="module" src="js/script.js"></script>
     </body>
 </html>

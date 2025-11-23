@@ -115,10 +115,35 @@ app.put('/new-incident', (req, res) => {
 });
 
 // DELETE request handler for new crime incident
-app.delete('/remove-incident', (req, res) => {
-    console.log(req.body); // uploaded data
-    
-    res.status(200).type('txt').send('OK'); // <-- you may need to change this
+app.delete("/remove-incident", (req, res) => {
+    const caseNumber = req.body.case_number;
+    if (!caseNumber) {
+        res.status(400).type("txt").send("error: missing case_number");
+        return;
+    }
+    // 1. Check if case_number exists
+    const checkSql = "SELECT case_number FROM Incidents WHERE case_number = ?";
+    dbSelect(checkSql, [caseNumber])
+        .then(rows => {
+            if (rows.length === 0) {
+                // Same logic as: if (user_index < 0)
+                res.status(500).type("txt").send("error: case_number does not exist");
+                throw new Error("stop");   // stop the promise chain
+            }
+
+            // 2. Delete the record
+            const deleteSql = "DELETE FROM Incidents WHERE case_number = ?";
+            return dbRun(deleteSql, [caseNumber]);
+        })
+        .then(() => {
+            // Same logic as: res.send("success")
+            res.status(200).type("txt").send("success");
+        })
+        .catch(err => {
+            if (err.message !== "stop") {
+                res.status(500).type("txt").send("error: " + err.message);
+            }
+        });
 });
 
 /********************************************************************
