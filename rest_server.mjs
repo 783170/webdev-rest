@@ -68,15 +68,24 @@ app.get('/codes', (req, res) => {
     // res.status(200).type('json').send({}); // <-- you will need to change this
     let sql = `SELECT code, incident_type FROM Codes ORDER BY code ASC`;
 
-    db.all(sql, [], (err, rows) => {
+    let params = [];
+
+    db.all(sql, params, (err, rows) => {
         if (err) {
-            res.status(500).json({ error});
+            res.status(500).json({ error: err.message });
             return;
         }
-        res.json(rows.map(r => ({
+        else {
+            if (req.query.code) {
+                const placeholders = req.query.code.split(',').map(() => '?').join(',');
+                sql += ` WHERE code IN (${placeholders})`;
+                params = req.query.code.split(',');
+            }
+            res.json(rows.map(r => ({
             code: r.code,
             type: r.incident_type
         })));
+        }
     });
 });
 
@@ -86,32 +95,122 @@ app.get('/neighborhoods', (req, res) => {
     
     // res.status(200).type('json').send({}); // <-- you will need to change this
     let sql = `SELECT neighborhood_number, neighborhood_name FROM Neighborhoods ORDER BY neighborhood_number ASC`;
+    let params = [];
 
     db.all(sql, [], (err, rows) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
+        else {
+            if (req.query.id) {
+                const placeholders = req.query.id.split(',').map(() => '?').join(',');
+                sql += ` WHERE neighborhood_number IN (${placeholders})`;
+                params = req.query.id.split(',');
+            }
+                    
+            //sql += ` ORDER BY neighborhood_number ASC`;
+
+            res.json(rows.map(r => ({
+                id: r.neighborhood_number,
+                name: r.neighborhood_name
+            })));
+        }
+    });
+});
+
+// GET request handler for crime incidents -- Erin
+app.get('/incidents', (req, res) => {
+    let sql = `SELECT case_number, DATE(date_time) as date, TIME(date_time) as time, code, incident, police_grid, neighborhood_number, block FROM Incidents`;
+
+    let first = true;
+    // WHERE ... AND ... AND ...
+    if (!!req.query.case_number) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` case_number = '${req.query.case_number}'`;
+        first = false;
+    }
+    if (!!req.query.start_date) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` DATE(date_time) >= '${req.query.start_date}'`;
+        first = false;
+    }
+    if (!!req.query.end_date) { //YYYY-MM-DD
+        sql += (first ? ' WHERE' : ' AND') + ` DATE(date_time) <= '${req.query.end_date}'`;
+        first = false;
+    }
+    if (!!req.query.code) {
+        sql += (first ? ' WHERE' : ' AND') + ` code IN (${req.query.code})`;
+        first = false;
+    }
+    if (!!req.query.grid) {
+        sql += (first ? ' WHERE' : ' AND') + ` police_grid IN (${req.query.grid})`;
+        first = false;
+    }
+    if (!!req.query.neighborhood) {
+        sql += (first ? ' WHERE' : ' AND') + ` neighborhood_number IN (${req.query.neighborhood})`;
+        first = false;
+    }
+
+    // ORDER BY
+    sql += ' ORDER BY date_time DESC';
+
+    // LIMIT
+    sql += (!!req.query.limit) ? ` LIMIT ${req.query.limit}` : ' LIMIT 1000';
+
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({error: err.message});
+            return;
+        } 
 
         res.json(rows.map(r => ({
-            id: r.neighborhood_number,
-            name: r.neighborhood_name
+            case_number: r.case_number,
+            date: r.date,
+            time: r.time,
+            code: r.code,
+            incident: r.incident,
+            police_grid: r.police_grid,
+            neighborhood_number: r.neighborhood_number,
+            block: r.block
         })));
     });
 });
 
-// GET request handler for crime incidents
-app.get('/incidents', (req, res) => {
-    console.log(req.query); // query object (key-value pairs after the ? in the url)
-    
-    res.status(200).type('json').send({}); // <-- you will need to change this
-});
-
 // PUT request handler for new crime incident
 app.put('/new-incident', (req, res) => {
-    console.log(req.body); // uploaded data
-    
-    res.status(200).type('txt').send('OK'); // <-- you may need to change this
+    if (req.body.case_number) {
+        db.all(`SELECT COUNT(case_number) FROM Incidents WHERE case_number = ${req.body.case_number};`, [], (err, rows) => {
+            if (err) {
+                res.status(500).json({error: err.message});
+                return;
+            } else {
+                if (rows[0]['COUNT(case_number)'] == 1) {
+                    res.status(500).json({error: 'case number already in the database'});
+                } else {
+                    let sql = 'INSERT INTO Incidents (case_number, date_time, code, incident, police_grid, neighborhood_number, block) VALUES (';
+
+                    sql += `'${req.body.case_number}'`;
+                    sql += (!!req.body.date && !!req.body.time) ? `, '${req.body.date} ${req.body.time}'` : ', null';
+                    sql += (!!req.body.code)? `, ${req.body.code}` : ', null';
+                    sql += (!!req.body.incident) ? `, '${req.body.incident}'` : ', null';
+                    sql += (!!req.body.police_grid) ? `, ${req.body.police_grid}` : ', null';
+                    sql += (!!req.body.neighborhood_number) ? `, ${req.body.neighborhood_number}` : ', null';
+                    sql += (!!req.body.block) ? `, '${req.body.block}'` : ', null';
+                    sql += ');';
+
+                    db.exec(sql, (err) => {
+                        if (err) {
+                            res.status(500).json({error: err.message});
+                        } else {
+                            res.status(200).type('txt').send('OK');
+                        }
+                    })
+                }
+            }
+        })
+    } else {
+        res.status(500).json({error: 'no case number provided'});
+    }
 });
 
 // DELETE request handler for new crime incident
